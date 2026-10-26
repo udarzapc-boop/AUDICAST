@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>P2P Real-time Audio Sync & Monitor</title>
-    <!-- PeerJS Library for Real-time P2P Connection -->
+    <title>Full P2P Live Audio Stream & Request-Accept App</title>
+    <!-- PeerJS Library for WebRTC Connection & Media Streaming -->
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         :root {
@@ -31,18 +31,17 @@
 
         .btn { width: 100%; padding: 12px; border: none; border-radius: 10px; background: var(--accent); color: white; font-weight: 600; font-size: 0.9rem; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 12px var(--accent-glow); }
         .btn:hover { opacity: 0.9; }
+        .btn-success { background: var(--success); box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3); }
         .btn-secondary { background: #334155; box-shadow: none; }
-        .btn-danger { background: #dc2626; box-shadow: none; }
 
-        .device-list { display: flex; flex-direction: column; gap: 8px; max-height: 150px; overflow-y: auto; margin-top: 8px; }
+        .device-list { display: flex; flex-direction: column; gap: 8px; max-height: 180px; overflow-y: auto; margin-top: 8px; }
         .device-item { display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.25); padding: 10px 12px; border-radius: 10px; font-size: 0.85rem; }
         
         .badge { padding: 4px 10px; border-radius: 20px; font-size: 0.7rem; font-weight: 600; display: inline-flex; align-items: center; gap: 5px; }
         .badge.online { background: rgba(34, 197, 94, 0.15); color: var(--success); border: 1px solid rgba(34, 197, 94, 0.3); }
-        .badge.offline { background: rgba(239, 68, 68, 0.15); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.3); }
-        .dot { width: 6px; height: 6px; border-radius: 50%; background-color: currentColor; }
+        .badge.pending { background: rgba(234, 179, 8, 0.15); color: #eab308; border: 1px solid rgba(234, 179, 8, 0.3); }
 
-        .input-box { width:100%; padding: 12px; border-radius: 8px; border: 1px solid #475569; background: #0f172a; color: white; margin-bottom: 12px; font-size: 0.9rem; text-align: center; letter-spacing: 1px; font-weight: bold; }
+        .input-box { width:100%; padding: 10px; border-radius: 8px; border: 1px solid #475569; background: #0f172a; color: white; margin-bottom: 12px; font-size: 0.9rem; text-align: center; font-weight: bold; }
         .file-input-wrapper { border: 2px dashed #475569; padding: 14px; text-align: center; border-radius: 10px; cursor: pointer; margin-bottom: 12px; font-size: 0.85rem; color: var(--text-sub); }
         .file-input-wrapper input { display: none; }
         
@@ -53,202 +52,249 @@
 
 <div class="container">
     <header>
-        <h1>P2P Audio Mesh App</h1>
-        <p>Real-time Sync & Device Monitor</p>
+        <h1>Wi-Fi Live Audio Streamer</h1>
+        <p>Request-Accept & Real WebRTC Audio Sync</p>
     </header>
 
-    <!-- Mode Selector -->
+    <!-- Role Selection -->
     <div class="card" style="display: flex; gap: 10px;">
-        <button id="btnModeHost" class="btn" style="flex:1;">Host Session</button>
-        <button id="btnModeClient" class="btn btn-secondary" style="flex:1;">Join as Client</button>
+        <button id="btnRoleHost" class="btn" style="flex:1;">I am Host (Laptop)</button>
+        <button id="btnRoleClient" class="btn btn-secondary" style="flex:1;">I am Client (Phone)</button>
     </div>
 
-    <!-- Host Dashboard View -->
-    <div id="hostView" class="card">
+    <!-- Host Dashboard -->
+    <div id="hostDashboard" class="card">
         <div class="card-title">
-            <span>Host Controller</span>
-            <span id="hostStatusBadge" class="badge offline"><span class="dot"></span>Initializing...</span>
+            <span>Host Control Panel</span>
+            <span id="hostStatus" class="badge pending">Initializing...</span>
         </div>
 
-        <div style="margin-bottom: 12px; font-size: 0.85rem; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; text-align: center;">
-            Your Room ID: <strong id="displayRoomId" style="color: #38bdf8; font-size: 1rem;">Generating...</strong>
-        </div>
+        <label style="font-size: 0.85rem; color: var(--text-sub);">Room Name (Share with phone):</label>
+        <input type="text" id="hostRoomInput" class="input-box" value="my-music-room">
+        <button id="btnUpdateRoom" class="btn" style="margin-bottom: 12px; padding: 8px;">Apply Room Name</button>
 
         <label class="file-input-wrapper">
             <span id="fileName">Select Audio File (.mp3)</span>
             <input type="file" id="audioFile" accept="audio/*">
         </label>
-
-        <audio id="audioPlayer" controls style="display:none;"></audio>
+        <audio id="hostAudio" controls style="display:none;"></audio>
 
         <div class="card-title" style="margin-top: 16px; margin-bottom: 6px;">
-            <span>Connected Devices Monitor</span>
-            <span id="deviceCount" style="font-size:0.75rem; color:var(--text-sub);">0 Connected</span>
+            <span>Incoming Connection Requests</span>
         </div>
-        <div class="device-list" id="deviceList">
-            <div style="font-size: 0.8rem; color: var(--text-sub); text-align: center; padding: 10px;">Waiting for clients to join...</div>
+        <div class="device-list" id="requestsList">
+            <div style="font-size: 0.8rem; color: var(--text-sub); text-align: center; padding: 6px;">No requests yet...</div>
+        </div>
+
+        <div class="card-title" style="margin-top: 16px; margin-bottom: 6px;">
+            <span>Connected & Streaming Devices</span>
+        </div>
+        <div class="device-list" id="connectedList">
+            <div class="device-item">
+                <span>💻 Host Laptop</span>
+                <span class="badge online">Active</span>
+            </div>
         </div>
     </div>
 
-    <!-- Client View (Hidden by Default) -->
-    <div id="clientView" class="card" style="display: none;">
+    <!-- Client Dashboard -->
+    <div id="clientDashboard" class="card" style="display: none;">
         <div class="card-title">
-            <span>Client Receiver Mode</span>
-            <span id="clientStatusBadge" class="badge offline"><span class="dot"></span>Disconnected</span>
+            <span>Client Receiver Panel</span>
+            <span id="clientStatus" class="badge pending">Disconnected</span>
         </div>
-        <p style="font-size: 0.85rem; color: var(--text-sub); margin-bottom: 8px;">Enter Host Room ID:</p>
-        <input type="text" id="roomIdInput" class="input-box" placeholder="Enter Room ID here">
-        <button id="btnConnectHost" class="btn">Connect to Room</button>
         
-        <div style="margin-top: 14px; text-align: center;">
-            <audio id="clientAudioPlayer" controls style="width:100%;"></audio>
+        <label style="font-size: 0.85rem; color: var(--text-sub);">Host Room Name:</label>
+        <input type="text" id="clientRoomInput" class="input-box" value="my-music-room">
+
+        <label style="font-size: 0.85rem; color: var(--text-sub);">Your Device Name:</label>
+        <input type="text" id="clientNameInput" class="input-box" value="My Phone Earbud">
+
+        <button id="btnSendRequest" class="btn">Send Request to Host</button>
+        
+        <div id="clientPlayerContainer" style="display: none; margin-top: 14px; text-align: center;">
+            <p style="font-size: 0.85rem; color: var(--success); margin-bottom: 8px;">✔ Host Accepted! Live Audio Streaming:</p>
+            <audio id="clientAudio" autoplay controls></audio>
         </div>
     </div>
 </div>
 
 <script>
-    const btnModeHost = document.getElementById('btnModeHost');
-    const btnModeClient = document.getElementById('btnModeClient');
-    const hostView = document.getElementById('hostView');
-    const clientView = document.getElementById('clientView');
-    
-    const hostStatusBadge = document.getElementById('hostStatusBadge');
-    const displayRoomId = document.getElementById('displayRoomId');
-    const audioFileInput = document.getElementById('audioFile');
-    const fileNameDisplay = document.getElementById('fileName');
-    const audioPlayer = document.getElementById('audioPlayer');
-    const clientAudioPlayer = document.getElementById('clientAudioPlayer');
-    
-    const roomIdInput = document.getElementById('roomIdInput');
-    const btnConnectHost = document.getElementById('btnConnectHost');
-    const clientStatusBadge = document.getElementById('clientStatusBadge');
-    const deviceList = document.getElementById('deviceList');
-    const deviceCount = document.getElementById('deviceCount');
+    const btnRoleHost = document.getElementById('btnRoleHost');
+    const btnRoleClient = document.getElementById('btnRoleClient');
+    const hostDashboard = document.getElementById('hostDashboard');
+    const clientDashboard = document.getElementById('clientDashboard');
 
-    let peer, connectedClients = [];
-    let hostPeerId = '';
-    let clientConnection = null;
+    const hostRoomInput = document.getElementById('hostRoomInput');
+    const btnUpdateRoom = document.getElementById('btnUpdateRoom');
+    const hostStatus = document.getElementById('hostStatus');
+    const audioFileInput = document.getElementById('audioFile');
+    const fileName = document.getElementById('fileName');
+    const hostAudio = document.getElementById('hostAudio');
+    
+    const clientRoomInput = document.getElementById('clientRoomInput');
+    const clientNameInput = document.getElementById('clientNameInput');
+    const btnSendRequest = document.getElementById('btnSendRequest');
+    const clientStatus = document.getElementById('clientStatus');
+    const clientPlayerContainer = document.getElementById('clientPlayerContainer');
+    const requestsList = document.getElementById('requestsList');
+    const connectedList = document.getElementById('connectedList');
+    const clientAudio = document.getElementById('clientAudio');
+
+    let hostPeer = null;
+    let clientPeer = null;
+    let pendingClients = {}; 
+    let activeCalls = [];
 
     // Toggle Views
-    btnModeHost.addEventListener('click', () => {
-        hostView.style.display = 'block';
-        clientView.style.display = 'none';
-        btnModeHost.className = 'btn';
-        btnModeClient.className = 'btn btn-secondary';
-        initHostPeer();
+    btnRoleHost.addEventListener('click', () => {
+        hostDashboard.style.display = 'block';
+        clientDashboard.style.display = 'none';
+        btnRoleHost.className = 'btn';
+        btnRoleClient.className = 'btn btn-secondary';
+        initHost();
     });
 
-    btnModeClient.addEventListener('click', () => {
-        hostView.style.display = 'none';
-        clientView.style.display = 'block';
-        btnModeClient.className = 'btn';
-        btnModeHost.className = 'btn btn-secondary';
-        if(!peer) peer = new Peer();
+    btnRoleClient.addEventListener('click', () => {
+        hostDashboard.style.display = 'none';
+        clientDashboard.style.display = 'block';
+        btnRoleClient.className = 'btn';
+        btnRoleHost.className = 'btn btn-secondary';
     });
 
-    // 1. Initialize Host Peer
-    function initHostPeer() {
-        if (peer) peer.destroy();
-        peer = new Peer(); // Random free peer id
+    // Initialize Host Peer
+    function initHost() {
+        if(hostPeer) hostPeer.destroy();
+        const roomName = hostRoomInput.value.trim();
+        hostPeer = new Peer('wifi-live-audio-' + roomName);
 
-        peer.on('open', (id) => {
-            hostPeerId = id;
-            displayRoomId.textContent = id;
-            hostStatusBadge.className = 'badge online';
-            hostStatusBadge.innerHTML = '<span class="dot"></span>Ready (Hosting)';
+        hostPeer.on('open', () => {
+            hostStatus.className = 'badge online';
+            hostStatus.textContent = 'Room Ready';
         });
 
-        peer.on('connection', (conn) => {
-            connectedClients.push(conn);
-            updateDeviceMonitor();
+        hostPeer.on('error', () => {
+            hostStatus.textContent = 'Room Name Taken / Error';
+            alert("Room name might already be in use. Try a unique room name.");
+        });
 
+        hostPeer.on('connection', (conn) => {
             conn.on('data', (data) => {
-                console.log("Data from client:", data);
+                if(data.type === 'request-join') {
+                    pendingClients[conn.peer] = { conn: conn, name: data.name };
+                    updateRequestsUI();
+                }
             });
 
             conn.on('close', () => {
-                connectedClients = connectedClients.filter(c => c !== conn);
-                updateDeviceMonitor();
+                delete pendingClients[conn.peer];
+                updateRequestsUI();
             });
         });
     }
 
-    // Update Host Connected Devices List
-    function updateDeviceMonitor() {
-        deviceCount.textContent = `${connectedClients.length} Connected`;
-        if (connectedClients.length === 0) {
-            deviceList.innerHTML = `<div style="font-size: 0.8rem; color: var(--text-sub); text-align: center; padding: 10px;">Waiting for clients to join...</div>`;
+    btnUpdateRoom.addEventListener('click', () => {
+        initHost();
+        alert("Host room updated successfully!");
+    });
+
+    function updateRequestsUI() {
+        const keys = Object.keys(pendingClients);
+        if(keys.length === 0) {
+            requestsList.innerHTML = `<div style="font-size: 0.8rem; color: var(--text-sub); text-align: center; padding: 6px;">No requests yet...</div>`;
             return;
         }
-        deviceList.innerHTML = '';
-        connectedClients.forEach((client, index) => {
+        requestsList.innerHTML = '';
+        keys.forEach(peerId => {
+            const client = pendingClients[peerId];
             const div = document.createElement('div');
             div.className = 'device-item';
-            div.innerHTML = `<span>📱 Client Device #${index + 1} (${client.peer.substr(0,5)}...)</span><span class="badge online"><span class="dot"></span>Synced</span>`;
-            deviceList.appendChild(div);
+            div.innerHTML = `<span>📱 ${client.name}</span><button class="btn btn-success" style="width: auto; padding: 6px 12px; font-size: 0.75rem;" onclick="acceptClient('${peerId}')">Accept</button>`;
+            requestsList.appendChild(div);
         });
     }
 
-    // Host Audio Selection
-    audioFileInput.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if(file) {
-            fileNameDisplay.textContent = `File: ${file.name}`;
-            const fileURL = URL.createObjectURL(file);
-            audioPlayer.style.display = 'block';
-            audioPlayer.src = fileURL;
+    // Host Accepts Client Request & Initiates WebRTC Audio Stream Call
+    window.acceptClient = function(peerId) {
+        const client = pendingClients[peerId];
+        if(client) {
+            client.conn.send({ type: 'approved' });
 
-            // Broadcast audio file as Blob url or data to clients
-            audioPlayer.onplay = () => broadcastCommand({ type: 'play', time: audioPlayer.currentTime });
-            audioPlayer.onpause = () => broadcastCommand({ type: 'pause', time: audioPlayer.currentTime });
-            audioPlayer.onseeked = () => broadcastCommand({ type: 'seek', time: audioPlayer.currentTime });
-        }
-    });
-
-    function broadcastCommand(data) {
-        connectedClients.forEach(client => {
-            client.send(data);
-        });
-    }
-
-    // 2. Client Connection Logic
-    btnConnectHost.addEventListener('click', () => {
-        const roomId = roomIdInput.value.trim();
-        if(!roomId) {
-            alert("Please enter a valid Room ID!");
-            return;
-        }
-
-        clientStatusBadge.className = 'badge online';
-        clientStatusBadge.innerHTML = '<span class="dot"></span>Connecting...';
-
-        clientConnection = peer.connect(roomId);
-
-        clientConnection.on('open', () => {
-            clientStatusBadge.className = 'badge online';
-            clientStatusBadge.innerHTML = '<span class="dot"></span>Connected to Host!';
-            alert("Successfully connected to Host Room!");
-        });
-
-        clientConnection.on('data', (data) => {
-            if (data.type === 'play') {
-                clientAudioPlayer.play();
-            } else if (data.type === 'pause') {
-                clientAudioPlayer.pause();
-            } else if (data.type === 'seek') {
-                clientAudioPlayer.currentTime = data.time;
+            if(hostAudio.captureStream || hostAudio.mozCaptureStream) {
+                const audioStream = hostAudio.captureStream ? hostAudio.captureStream() : hostAudio.mozCaptureStream();
+                const call = hostPeer.call(peerId, audioStream);
+                activeCalls.push(call);
+            } else {
+                alert("Browser does not support audio stream capture!");
             }
+
+            const div = document.createElement('div');
+            div.className = 'device-item';
+            div.innerHTML = `<span>📱 ${client.name}</span><span class="badge online">Live Streaming</span>`;
+            connectedList.appendChild(div);
+
+            delete pendingClients[peerId];
+            updateRequestsUI();
+        }
+    }
+
+    // Audio file selection
+    audioFileInput.addEventListener('change', (e) => {
+        if(e.target.files.length > 0) {
+            const file = e.target.files[0];
+            fileName.textContent = `File: ${file.name}`;
+            hostAudio.style.display = 'block';
+            hostAudio.src = URL.createObjectURL(file);
+        }
+    });
+
+    // Client Connection & Request
+    btnSendRequest.addEventListener('click', () => {
+        const roomName = clientRoomInput.value.trim();
+        const clientName = clientNameInput.value.trim();
+
+        clientStatus.className = 'badge pending';
+        clientStatus.textContent = 'Connecting...';
+
+        if(clientPeer) clientPeer.destroy();
+        clientPeer = new Peer();
+
+        clientPeer.on('open', () => {
+            const hostPeerId = 'wifi-live-audio-' + roomName;
+            const conn = clientPeer.connect(hostPeerId);
+
+            conn.on('open', () => {
+                clientStatus.textContent = 'Waiting Approval...';
+                conn.send({ type: 'request-join', name: clientName });
+                alert("Request sent to Host! Please wait for acceptance.");
+            });
+
+            conn.on('data', (data) => {
+                if(data.type === 'approved') {
+                    clientStatus.className = 'badge online';
+                    clientStatus.textContent = 'Connected Live';
+                    clientPlayerContainer.style.display = 'block';
+                }
+            });
+
+            conn.on('error', () => {
+                clientStatus.className = 'badge pending';
+                clientStatus.textContent = 'Room Not Found';
+                alert("Could not connect to host room. Check room name!");
+            });
         });
 
-        clientConnection.on('close', () => {
-            clientStatusBadge.className = 'badge offline';
-            clientStatusBadge.innerHTML = '<span class="dot"></span>Disconnected';
-            alert("Disconnected from Host.");
+        // Listen for incoming WebRTC audio stream call from Host
+        clientPeer.on('call', (call) => {
+            call.answer(); 
+            call.on('stream', (remoteStream) => {
+                clientAudio.srcObject = remoteStream;
+                clientAudio.play().catch(e => console.log("Autoplay waiting for interaction"));
+            });
         });
     });
 
-    // Initial load start host
-    initHostPeer();
+    initHost();
 </script>
 
 </body>

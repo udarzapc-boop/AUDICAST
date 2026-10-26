@@ -3,61 +3,225 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Full P2P Live Audio Stream & Request-Accept App</title>
-    <!-- PeerJS Library for WebRTC Connection & Media Streaming -->
+    <title>Liquid Glass Wi-Fi Audio Streamer</title>
+    <!-- PeerJS Library for WebRTC Multi-Peer Streaming -->
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         :root {
-            --bg-color: #0f172a;
-            --card-bg: #1e293b;
-            --accent: #3b82f6;
-            --accent-glow: rgba(59, 130, 246, 0.3);
+            --bg-gradient: radial-gradient(circle at top left, #1e1b4b, #0f172a, #020617);
+            --glass-bg: rgba(30, 41, 59, 0.45);
+            --glass-card: rgba(15, 23, 42, 0.6);
+            --glass-border: rgba(255, 255, 255, 0.12);
+            --glass-highlight: rgba(255, 255, 255, 0.06);
+            --accent: #38bdf8;
+            --accent-gradient: linear-gradient(135deg, #38bdf8 0%, #3b82f6 100%);
+            --accent-glow: rgba(56, 189, 248, 0.35);
             --text-main: #f8fafc;
             --text-sub: #94a3b8;
-            --success: #22c55e;
-            --danger: #ef4444;
+            --success: #34d399;
+            --danger: #f87171;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-        body { background-color: var(--bg-color); color: var(--text-main); display: flex; justify-content: center; padding: 20px; min-height: 100vh; }
         
-        .container { width: 100%; max-width: 520px; display: flex; flex-direction: column; gap: 16px; }
-        header { text-align: center; margin-bottom: 4px; }
-        header h1 { font-size: 1.3rem; font-weight: 700; }
-        header p { font-size: 0.8rem; color: var(--text-sub); margin-top: 2px; }
-
-        .card { background: var(--card-bg); border-radius: 16px; padding: 16px; border: 1px solid rgba(255, 255, 255, 0.05); box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
-        .card-title { font-size: 0.9rem; font-weight: 600; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
-
-        .btn { width: 100%; padding: 12px; border: none; border-radius: 10px; background: var(--accent); color: white; font-weight: 600; font-size: 0.9rem; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 12px var(--accent-glow); }
-        .btn:hover { opacity: 0.9; }
-        .btn-success { background: var(--success); box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3); }
-        .btn-secondary { background: #334155; box-shadow: none; }
-
-        .device-list { display: flex; flex-direction: column; gap: 8px; max-height: 180px; overflow-y: auto; margin-top: 8px; }
-        .device-item { display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.25); padding: 10px 12px; border-radius: 10px; font-size: 0.85rem; }
+        body { 
+            background: var(--bg-gradient); 
+            background-attachment: fixed;
+            color: var(--text-main); 
+            display: flex; 
+            justify-content: center; 
+            align-items: flex-start;
+            padding: 16px; 
+            min-height: 100vh; 
+        }
         
-        .badge { padding: 4px 10px; border-radius: 20px; font-size: 0.7rem; font-weight: 600; display: inline-flex; align-items: center; gap: 5px; }
-        .badge.online { background: rgba(34, 197, 94, 0.15); color: var(--success); border: 1px solid rgba(34, 197, 94, 0.3); }
-        .badge.pending { background: rgba(234, 179, 8, 0.15); color: #eab308; border: 1px solid rgba(234, 179, 8, 0.3); }
+        .container { 
+            width: 100%; 
+            max-width: 560px; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 16px; 
+        }
 
-        .input-box { width:100%; padding: 10px; border-radius: 8px; border: 1px solid #475569; background: #0f172a; color: white; margin-bottom: 12px; font-size: 0.9rem; text-align: center; font-weight: bold; }
-        .file-input-wrapper { border: 2px dashed #475569; padding: 14px; text-align: center; border-radius: 10px; cursor: pointer; margin-bottom: 12px; font-size: 0.85rem; color: var(--text-sub); }
+        header { 
+            text-align: center; 
+            margin-bottom: 4px; 
+        }
+        header h1 { 
+            font-size: 1.5rem; 
+            font-weight: 800; 
+            background: linear-gradient(to right, #38bdf8, #818cf8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.5px;
+        }
+        header p { 
+            font-size: 0.85rem; 
+            color: var(--text-sub); 
+            margin-top: 4px; 
+        }
+
+        /* Liquid Glass Card Styling */
+        .card { 
+            background: var(--glass-bg); 
+            backdrop-filter: blur(24px); 
+            -webkit-backdrop-filter: blur(24px);
+            border-radius: 24px; 
+            padding: 20px; 
+            border: 1px solid var(--glass-border); 
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1); 
+        }
+
+        .card-title { 
+            font-size: 0.95rem; 
+            font-weight: 700; 
+            margin-bottom: 12px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            color: #e2e8f0;
+        }
+
+        .btn { 
+            width: 100%; 
+            padding: 13px; 
+            border: none; 
+            border-radius: 14px; 
+            background: var(--accent-gradient); 
+            color: white; 
+            font-weight: 700; 
+            font-size: 0.92rem; 
+            cursor: pointer; 
+            transition: all 0.25s ease; 
+            box-shadow: 0 4px 20px var(--accent-glow); 
+        }
+        .btn:hover { 
+            opacity: 0.92; 
+            transform: translateY(-1px);
+            box-shadow: 0 6px 24px rgba(56, 189, 248, 0.5);
+        }
+        .btn:active { transform: translateY(0); }
+        .btn-success { 
+            background: linear-gradient(135deg, #34d399 0%, #059669 100%); 
+            box-shadow: 0 4px 16px rgba(52, 211, 153, 0.35); 
+        }
+        .btn-secondary { 
+            background: rgba(51, 65, 85, 0.6); 
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: none; 
+            color: var(--text-sub);
+        }
+        .btn-secondary:hover { color: white; background: rgba(71, 85, 105, 0.8); }
+
+        .device-list { 
+            display: flex; 
+            flex-direction: column; 
+            gap: 8px; 
+            max-height: 180px; 
+            overflow-y: auto; 
+            margin-top: 8px; 
+            padding-right: 4px;
+        }
+        .device-list::-webkit-scrollbar { width: 4px; }
+        .device-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
+
+        .device-item { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            background: rgba(15, 23, 42, 0.4); 
+            padding: 11px 14px; 
+            border-radius: 12px; 
+            font-size: 0.88rem; 
+            border: 1px solid rgba(255, 255, 255, 0.04);
+        }
+        
+        .badge { 
+            padding: 5px 12px; 
+            border-radius: 20px; 
+            font-size: 0.72rem; 
+            font-weight: 700; 
+            display: inline-flex; 
+            align-items: center; 
+            gap: 6px; 
+        }
+        .badge.online { 
+            background: rgba(52, 211, 153, 0.15); 
+            color: var(--success); 
+            border: 1px solid rgba(52, 211, 153, 0.3); 
+        }
+        .badge.pending { 
+            background: rgba(250, 204, 21, 0.15); 
+            color: #facc15; 
+            border: 1px solid rgba(250, 204, 21, 0.3); 
+        }
+        .dot { 
+            width: 6px; 
+            height: 6px; 
+            border-radius: 50%; 
+            background-color: currentColor; 
+            box-shadow: 0 0 8px currentColor;
+        }
+
+        .input-box { 
+            width: 100%; 
+            padding: 12px 14px; 
+            border-radius: 12px; 
+            border: 1px solid rgba(255, 255, 255, 0.1); 
+            background: rgba(15, 23, 42, 0.5); 
+            color: white; 
+            margin-bottom: 12px; 
+            font-size: 0.92rem; 
+            text-align: center; 
+            font-weight: 600; 
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .input-box:focus { border-color: var(--accent); box-shadow: 0 0 12px rgba(56, 189, 248, 0.25); }
+
+        .file-input-wrapper { 
+            border: 2px dashed rgba(255, 255, 255, 0.15); 
+            padding: 16px; 
+            text-align: center; 
+            border-radius: 16px; 
+            cursor: pointer; 
+            margin-bottom: 12px; 
+            font-size: 0.88rem; 
+            color: var(--text-sub); 
+            background: rgba(15, 23, 42, 0.2);
+            transition: all 0.2s;
+        }
+        .file-input-wrapper:hover { 
+            border-color: var(--accent); 
+            color: var(--text-main);
+            background: rgba(56, 189, 248, 0.05); 
+        }
         .file-input-wrapper input { display: none; }
         
-        audio { width: 100%; margin-top: 8px; border-radius: 8px; }
+        audio { 
+            width: 100%; 
+            margin-top: 8px; 
+            border-radius: 10px; 
+            filter: drop-shadow(0 4px 12px rgba(0,0,0,0.3));
+        }
+
+        /* Responsive Layout Adjustments */
+        @media (min-width: 768px) {
+            body { padding: 32px; }
+            .container { max-width: 620px; }
+        }
     </style>
 </head>
 <body>
 
 <div class="container">
     <header>
-        <h1>Wi-Fi Live Audio Streamer</h1>
-        <p>Request-Accept & Real WebRTC Audio Sync</p>
+        <h1>Wi-Fi Audio Streamer</h1>
+        <p>Multi-Device Live Sync & Liquid Glass UI</p>
     </header>
 
     <!-- Role Selection -->
-    <div class="card" style="display: flex; gap: 10px;">
+    <div class="card" style="display: flex; gap: 10px; padding: 12px;">
         <button id="btnRoleHost" class="btn" style="flex:1;">I am Host (Laptop)</button>
         <button id="btnRoleClient" class="btn btn-secondary" style="flex:1;">I am Client (Phone)</button>
     </div>
@@ -65,34 +229,34 @@
     <!-- Host Dashboard -->
     <div id="hostDashboard" class="card">
         <div class="card-title">
-            <span>Host Control Panel</span>
-            <span id="hostStatus" class="badge pending">Initializing...</span>
+            <span>Host Multi-Stream Control</span>
+            <span id="hostStatus" class="badge pending"><span class="dot"></span>Initializing...</span>
         </div>
 
-        <label style="font-size: 0.85rem; color: var(--text-sub);">Room Name (Share with phone):</label>
-        <input type="text" id="hostRoomInput" class="input-box" value="my-music-room">
-        <button id="btnUpdateRoom" class="btn" style="margin-bottom: 12px; padding: 8px;">Apply Room Name</button>
+        <label style="font-size: 0.85rem; color: var(--text-sub); display: block; margin-bottom: 6px;">Room Name (Share with all devices):</label>
+        <input type="text" id="hostRoomInput" class="input-box" value="multi-music-room">
+        <button id="btnUpdateRoom" class="btn" style="margin-bottom: 14px; padding: 10px; font-size: 0.85rem;">Apply Room Name</button>
 
         <label class="file-input-wrapper">
-            <span id="fileName">Select Audio File (.mp3)</span>
+            <span id="fileName">🎵 Select Audio File (.mp3)</span>
             <input type="file" id="audioFile" accept="audio/*">
         </label>
         <audio id="hostAudio" controls style="display:none;"></audio>
 
-        <div class="card-title" style="margin-top: 16px; margin-bottom: 6px;">
+        <div class="card-title" style="margin-top: 18px; margin-bottom: 6px;">
             <span>Incoming Connection Requests</span>
         </div>
         <div class="device-list" id="requestsList">
-            <div style="font-size: 0.8rem; color: var(--text-sub); text-align: center; padding: 6px;">No requests yet...</div>
+            <div style="font-size: 0.82rem; color: var(--text-sub); text-align: center; padding: 10px;">No requests yet...</div>
         </div>
 
-        <div class="card-title" style="margin-top: 16px; margin-bottom: 6px;">
-            <span>Connected & Streaming Devices</span>
+        <div class="card-title" style="margin-top: 18px; margin-bottom: 6px;">
+            <span>Connected Devices (<span id="deviceCount">1</span>)</span>
         </div>
         <div class="device-list" id="connectedList">
             <div class="device-item">
-                <span>💻 Host Laptop</span>
-                <span class="badge online">Active</span>
+                <span>💻 Host Laptop (Source)</span>
+                <span class="badge online"><span class="dot"></span>Active</span>
             </div>
         </div>
     </div>
@@ -101,19 +265,19 @@
     <div id="clientDashboard" class="card" style="display: none;">
         <div class="card-title">
             <span>Client Receiver Panel</span>
-            <span id="clientStatus" class="badge pending">Disconnected</span>
+            <span id="clientStatus" class="badge pending"><span class="dot"></span>Disconnected</span>
         </div>
         
-        <label style="font-size: 0.85rem; color: var(--text-sub);">Host Room Name:</label>
-        <input type="text" id="clientRoomInput" class="input-box" value="my-music-room">
+        <label style="font-size: 0.85rem; color: var(--text-sub); display: block; margin-bottom: 6px;">Host Room Name:</label>
+        <input type="text" id="clientRoomInput" class="input-box" value="multi-music-room">
 
-        <label style="font-size: 0.85rem; color: var(--text-sub);">Your Device Name:</label>
-        <input type="text" id="clientNameInput" class="input-box" value="My Phone Earbud">
+        <label style="font-size: 0.85rem; color: var(--text-sub); display: block; margin-bottom: 6px;">Your Device Name:</label>
+        <input type="text" id="clientNameInput" class="input-box" value="My Phone / Earbuds">
 
         <button id="btnSendRequest" class="btn">Send Request to Host</button>
         
-        <div id="clientPlayerContainer" style="display: none; margin-top: 14px; text-align: center;">
-            <p style="font-size: 0.85rem; color: var(--success); margin-bottom: 8px;">✔ Host Accepted! Live Audio Streaming:</p>
+        <div id="clientPlayerContainer" style="display: none; margin-top: 16px; text-align: center;">
+            <p style="font-size: 0.85rem; color: var(--success); margin-bottom: 8px; font-weight: 600;">✔ Connected! Receiving Live Audio:</p>
             <audio id="clientAudio" autoplay controls></audio>
         </div>
     </div>
@@ -139,12 +303,14 @@
     const clientPlayerContainer = document.getElementById('clientPlayerContainer');
     const requestsList = document.getElementById('requestsList');
     const connectedList = document.getElementById('connectedList');
+    const deviceCount = document.getElementById('deviceCount');
     const clientAudio = document.getElementById('clientAudio');
 
     let hostPeer = null;
     let clientPeer = null;
     let pendingClients = {}; 
     let activeCalls = [];
+    let connectedDeviceCount = 1;
 
     // Toggle Views
     btnRoleHost.addEventListener('click', () => {
@@ -166,15 +332,16 @@
     function initHost() {
         if(hostPeer) hostPeer.destroy();
         const roomName = hostRoomInput.value.trim();
-        hostPeer = new Peer('wifi-live-audio-' + roomName);
+        hostPeer = new Peer('multi-wifi-audio-' + roomName);
 
         hostPeer.on('open', () => {
             hostStatus.className = 'badge online';
-            hostStatus.textContent = 'Room Ready';
+            hostStatus.innerHTML = '<span class="dot"></span>Room Ready';
         });
 
         hostPeer.on('error', () => {
-            hostStatus.textContent = 'Room Name Taken / Error';
+            hostStatus.className = 'badge pending';
+            hostStatus.innerHTML = '<span class="dot"></span>Room Taken / Error';
             alert("Room name might already be in use. Try a unique room name.");
         });
 
@@ -195,13 +362,13 @@
 
     btnUpdateRoom.addEventListener('click', () => {
         initHost();
-        alert("Host room updated successfully!");
+        alert("Host multi-room updated successfully!");
     });
 
     function updateRequestsUI() {
         const keys = Object.keys(pendingClients);
         if(keys.length === 0) {
-            requestsList.innerHTML = `<div style="font-size: 0.8rem; color: var(--text-sub); text-align: center; padding: 6px;">No requests yet...</div>`;
+            requestsList.innerHTML = `<div style="font-size: 0.82rem; color: var(--text-sub); text-align: center; padding: 10px;">No requests yet...</div>`;
             return;
         }
         requestsList.innerHTML = '';
@@ -209,17 +376,18 @@
             const client = pendingClients[peerId];
             const div = document.createElement('div');
             div.className = 'device-item';
-            div.innerHTML = `<span>📱 ${client.name}</span><button class="btn btn-success" style="width: auto; padding: 6px 12px; font-size: 0.75rem;" onclick="acceptClient('${peerId}')">Accept</button>`;
+            div.innerHTML = `<span>📱 ${client.name}</span><button class="btn btn-success" style="width: auto; padding: 6px 14px; font-size: 0.78rem;" onclick="acceptClient('${peerId}')">Accept</button>`;
             requestsList.appendChild(div);
         });
     }
 
-    // Host Accepts Client Request & Initiates WebRTC Audio Stream Call
+    // Host Accepts Any Number of Clients Simultaneously & Streams Audio to Each
     window.acceptClient = function(peerId) {
         const client = pendingClients[peerId];
         if(client) {
             client.conn.send({ type: 'approved' });
 
+            // Check if audio is loaded and capture stream
             if(hostAudio.captureStream || hostAudio.mozCaptureStream) {
                 const audioStream = hostAudio.captureStream ? hostAudio.captureStream() : hostAudio.mozCaptureStream();
                 const call = hostPeer.call(peerId, audioStream);
@@ -228,10 +396,14 @@
                 alert("Browser does not support audio stream capture!");
             }
 
+            // Update UI Connected List
             const div = document.createElement('div');
             div.className = 'device-item';
-            div.innerHTML = `<span>📱 ${client.name}</span><span class="badge online">Live Streaming</span>`;
+            div.innerHTML = `<span>📱 ${client.name}</span><span class="badge online"><span class="dot"></span>Live Streaming</span>`;
             connectedList.appendChild(div);
+
+            connectedDeviceCount++;
+            deviceCount.textContent = connectedDeviceCount;
 
             delete pendingClients[peerId];
             updateRequestsUI();
@@ -242,7 +414,7 @@
     audioFileInput.addEventListener('change', (e) => {
         if(e.target.files.length > 0) {
             const file = e.target.files[0];
-            fileName.textContent = `File: ${file.name}`;
+            fileName.textContent = `🎵 ${file.name}`;
             hostAudio.style.display = 'block';
             hostAudio.src = URL.createObjectURL(file);
         }
@@ -254,17 +426,17 @@
         const clientName = clientNameInput.value.trim();
 
         clientStatus.className = 'badge pending';
-        clientStatus.textContent = 'Connecting...';
+        clientStatus.innerHTML = '<span class="dot"></span>Connecting...';
 
         if(clientPeer) clientPeer.destroy();
         clientPeer = new Peer();
 
         clientPeer.on('open', () => {
-            const hostPeerId = 'wifi-live-audio-' + roomName;
+            const hostPeerId = 'multi-wifi-audio-' + roomName;
             const conn = clientPeer.connect(hostPeerId);
 
             conn.on('open', () => {
-                clientStatus.textContent = 'Waiting Approval...';
+                clientStatus.innerHTML = '<span class="dot"></span>Waiting Approval...';
                 conn.send({ type: 'request-join', name: clientName });
                 alert("Request sent to Host! Please wait for acceptance.");
             });
@@ -272,14 +444,14 @@
             conn.on('data', (data) => {
                 if(data.type === 'approved') {
                     clientStatus.className = 'badge online';
-                    clientStatus.textContent = 'Connected Live';
+                    clientStatus.innerHTML = '<span class="dot"></span>Connected Live';
                     clientPlayerContainer.style.display = 'block';
                 }
             });
 
             conn.on('error', () => {
                 clientStatus.className = 'badge pending';
-                clientStatus.textContent = 'Room Not Found';
+                clientStatus.innerHTML = '<span class="dot"></span>Room Not Found';
                 alert("Could not connect to host room. Check room name!");
             });
         });
